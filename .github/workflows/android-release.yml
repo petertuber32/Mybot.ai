@@ -59,6 +59,10 @@ jobs:
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort | tail -n1)
           "$APKSIGNER" verify --print-certs "$APK"
 
+      - name: Remove keystore from runner (never leave signing material behind)
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release-keystore.jks"
+
       - name: Resolve version and rename APK
         id: ver
         run: |

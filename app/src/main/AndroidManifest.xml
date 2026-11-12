@@ -5,7 +5,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_ALERT_WINDOW" />
+    <!-- API 34+: a foreground service that keeps the floating overlay alive
+         must declare the specialUse type plus this normal-level permission. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -30,10 +32,17 @@
             android:name=".ocr.OcrActivity"
             android:exported="false" />
 
+        <!-- Keeps the floating analyzer window alive while the user plays in
+             another app. Android 14 requires an explicit FGS type; overlays
+             use "specialUse" with a human-readable subtype justification. -->
         <service
             android:name=".overlay.FloatingService"
             android:exported="false"
-            android:foregroundServiceType="systemOverlay" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Floating analyzer window shown over other apps while the user plays, after granting SYSTEM_ALERT_WINDOW in Android settings" />
+        </service>
     </application>
 
 </manifest>

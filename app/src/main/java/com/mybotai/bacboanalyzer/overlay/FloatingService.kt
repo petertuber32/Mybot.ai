@@ -83,8 +83,11 @@ class FloatingService : Service() {
             .setContentText(getString(R.string.notif_text))
             .setOngoing(true)
             .build()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_ALERT_WINDOW)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            // Android 14+: foreground service type must match the manifest
+            // declaration ("specialUse" — the correct type for overlay tools;
+            // "systemOverlay" does not exist in the Android SDK).
+            startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
             startForeground(NOTIF_ID, notification)
         }
