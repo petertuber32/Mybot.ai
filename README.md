@@ -58,13 +58,13 @@ O workflow **exige** 4 secrets em *Settings → Secrets and variables → Action
 | `KEY_ALIAS` | Alias da chave (ex.: `bacbo-release`) |
 | `KEY_PASSWORD` | Palavra-passe da chave |
 
-**Regra fundamental:** nunca gerar uma nova chave quando já existe uma válida — todas as versões futuras têm de usar a **mesma chave** e o **mesmo package name** (`com.mybotai.bacboanalyzer`) para permitir atualizações sem desinstalar. O keystore de produção não é guardado no código-fonte (`.gitignore` bloqueia `*.jks`).
+**Regra fundamental:** nunca gerar uma nova chave quando já existe uma válida — todas as versões futuras têm de usar a **mesma chave** e o **mesmo package name** (`com.mybotai.bacboanalyzer`) para permitir atualizações sem desinstalar. O keystore de produção não é guardado no código-fonte (`.gitignore` bloqueia `*.jks`). Guarda sempre uma cópia local do `.jks` + passwords num local seguro: sem essa chave, futuras atualizações teriam de ser instaladas após desinstalar a app.
 
 Para criar um keystore novo (apenas se ainda não existir nenhum):
 
 ```bash
 keytool -genkeypair -v -keystore bacbo-release-key.jks \
-  -alias bacbo-release -keyalg RSA -keysize 2045 -validity 10950 \
+  -alias bacbo-release -keyalg RSA -keysize 2048 -validity 10950 \
   -dname "CN=BAC BO AI ANALYZER, OU=Mybot.ai, O=Mybot.ai, C=AO"
 base64 -w0 bacbo-release-key.jks   # colar em ANDROID_KEYSTORE_BASE64
 ```
@@ -79,11 +79,21 @@ O botão "Verificar atualizações" na app compara o tag `v<versão>` mais recen
 
 ## 6. Instalação no telemóvel
 
-1. Descarregar o APK da última Release (ou do artefacto do workflow).
+1. Descarregar o APK da última Release: **https://github.com/petertuber32/Mybot.ai/releases/latest** (ficheiro `bacbo-analyzer-v<versão>.apk`).
 2. Abrir o APK; o Android pedirá permissão "Instalar apps desconhecidas" para o browser/ficheiro usado — conceder.
 3. Instalar e abrir. Para a janela flutuante: **Ajustes → Janela flutuante → Conceder permissão** → ativar "Sobrepor outras janelas" nas definições do Android → voltar → "Mostrar janela flutuante".
 
 Requisitos: Android 8.0+ (API 26).
+
+## 6.1. Verificação de qualidade (o que está validado vs. o que precisa de teste físico)
+
+| Verificação | Estado |
+| --- | --- |
+| Compilação (`assembleRelease`) | ✅ executada automaticamente no CI em cada push |
+| Testes unitários do motor estatístico, parser OCR, persistência e versões | ✅ executados no CI; o build falha se algum falhar |
+| Assinatura digital do APK | ✅ verificada no CI com `apksigner verify --print-certs` |
+| Secrets nos logs | ✅ o GitHub mascara automaticamente os valores; nenhum passo imprime variáveis secretas |
+| Instalação em dispositivo real, janela flutuante sobre outras apps, navegação WebView, atualização sobre versão anterior | ⚠️ requer teste físico no telemóvel (o CI não executa emulador) — seguir os passos da secção 6 e reportar problemas |
 
 ## 7. Compilar localmente
 
@@ -99,7 +109,9 @@ Com os 4 `KEYSTORE_*` definidos no ambiente, o `assembleRelease` produz o APK j�
 ## 8. Limitações conhecidas
 
 - **OCR**: funciona quando os resultados aparecem como **texto** no screenshot (ex.: "AZUL", "VERMELHO", "EMPATE"). Se a plataforma mostrar apenas ícones/dados, o OCR não consegue ler — nesse caso use a introdução manual. Todos os resultados OCR passam sempre por revisão manual antes de serem guardados.
-- A verificação de instalação, da janela flutuante e do navegador em dispositivos reais não é executável no CI — testada em código e por compilação; validar no telemódulo físico após instalar.
+- A verificação de instalação, da janela flutuante e do navegador em dispositivos reais não é executável no CI — testada em código e por compilação; validar no telemóvel físico após instalar.
 - A app não tem backend nem sincronização entre dispositivos (armazenamento local JSON no dispositivo).
 - A verificação de atualizações precisa de internet; se falhar, use "Abrir página de versões".
 - Se os secrets de assinatura não estiverem configurados, o workflow falha deliberadamente com mensagem clara (nunca gera chave automaticamente).
+- O OCR depende de os resultados estarem visíveis como texto no screenshot; plataformas que mostrem apenas dados/ícones exigem introdução manual.
+- O Android pode terminar o serviço em segundo plano em condições extremas de memória; a janela flutuante usa um serviço em primeiro plano (foreground service) para minimizar este risco.
