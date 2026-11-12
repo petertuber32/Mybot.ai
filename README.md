@@ -60,6 +60,19 @@ O workflow **exige** 4 secrets em *Settings → Secrets and variables → Action
 
 **Regra fundamental:** nunca gerar uma nova chave quando já existe uma válida — todas as versões futuras têm de usar a **mesma chave** e o **mesmo package name** (`com.mybotai.bacboanalyzer`) para permitir atualizações sem desinstalar. O keystore de produção não é guardado no código-fonte (`.gitignore` bloqueia `*.jks`). Guarda sempre uma cópia local do `.jks` + passwords num local seguro: sem essa chave, futuras atualizações teriam de ser instaladas após desinstalar a app.
 
+### Impressão digital do certificado de assinatura (referência para futuras versões)
+
+Todas as releases têm de ser assinadas com o MESMO certificado. Verificação (CI e local):
+
+```
+SHA-256: 30:C2:04:C3:19:74:87:04:1C:23:E6:D7:6D:D1:1F:0B:B6:C2:20:AA:C5:C9:2C:75:5D:EB:24:A1:45:E2:E9:94
+Assunto: CN=BAC BO AI ANALYZER, OU=Mybot.ai, O=Mybot.ai, L=Luanda, C=AO
+Validade: até 2056 (30 anos)
+```
+
+Para verificar um APK no teu computador:
+`apksigner verify --print-certs bacbo-analyzer-vX.Y.Z.apk`
+
 Para criar um keystore novo (apenas se ainda não existir nenhum):
 
 ```bash
