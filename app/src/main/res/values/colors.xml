@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#0B0E13</color>
+    <color name="surface">#151A22</color>
+    <color name="surface_variant">#1E2633</color>
+    <color name="primary">#3B82F6</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="red">#EF4444</color>
+    <color name="tie">#94A3B8</color>
+    <color name="text_main">#E5E7EB</color>
+    <color name="text_muted">#94A3B8</color>
+    <color name="warning">#F59E0B</color>
+    <color name="launcher_bg">#0F172A</color>
+</resources>

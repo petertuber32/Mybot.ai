@@ -1,0 +1,15 @@
+*.iml
+.gradle/
+/local.properties
+.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+app/build/
+
+# Never commit signing material - it lives only in GitHub Secrets
+# and in a local backup owned by the repository owner.
+*.jks
+*.keystore

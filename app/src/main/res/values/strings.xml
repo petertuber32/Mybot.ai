@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BAC BO AI ANALYZER</string>
+
+    <!-- Navigation -->
+    <string name="nav_analyzer">Analisador</string>
+    <string name="nav_history">Histórico</string>
+    <string name="nav_browser">Navegador</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancelar</string>
+    <string name="yes">Apagar</string>
+    <string name="delete">Apagar</string>
+    <string name="saved">Guardado</string>
+
+    <!-- First run -->
+    <string name="first_run_title">Janela flutuante</string>
+    <string name="first_run_hint">Para usar a janela flutuante sobre outras aplicações (por exemplo, enquanto joga), conceda a permissão "Sobrepor outras janelas" em Ajustes → Janela flutuante. O Android pede autorização explícita; a aplicação não contorna restrições de segurança.</string>
+
+    <!-- Analyzer -->
+    <string name="register_result">Registar resultado</string>
+    <string name="btn_blue">AZUL</string>
+    <string name="btn_red">VERMELHO</string>
+    <string name="btn_tie">EMPATE</string>
+    <string name="btn_undo">Desfazer último</string>
+    <string name="btn_ocr">Importar screenshot (OCR)</string>
+    <string name="btn_analyze">ANALISAR PRÓXIMA RONDA</string>
+    <string name="next_round_estimate">Próxima ronda — estimativa estatística</string>
+    <string name="lbl_blue">Azul</string>
+    <string name="lbl_red">Vermelho</string>
+    <string name="lbl_tie">Empate</string>
+    <string name="stats_meta_fmt">Rondas: %1$d · Qualidade: %2$s</string>
+    <string name="quality_insufficient">Dados insuficientes</string>
+    <string name="quality_low">Baixa</string>
+    <string name="quality_medium">Média</string>
+    <string name="quality_good">Boa</string>
+    <string name="explanation_title">Explicação estatística</string>
+    <string name="empty_state">Sem dados. Registe resultados manualmente ou importe um screenshot (OCR).</string>
+    <string name="disclaimer_text">Aviso estatístico: as rondas são independentes. Estas percentagens descrevem frequências do histórico e a respetiva incerteza — NÃO são previsões garantidas. Num jogo justo, cada resultado tem ≈ 33,3%.</string>
+
+    <!-- History -->
+    <string name="history_count_fmt">%1$d rondas registadas</string>
+    <string name="btn_export">Exportar</string>
+    <string name="btn_clear">Limpar tudo</string>
+    <string name="confirm_clear">Apagar todo o histórico? Esta ação não pode ser revertida.</string>
+    <string name="src_manual">MANUAL</string>
+    <string name="src_ocr">OCR</string>
+    <string name="edit_outcome">Editar resultado</string>
+
+    <!-- Browser -->
+    <string name="hint_url">Endereço (https:// …)</string>
+    <string name="btn_go">Ir</string>
+    <string name="error_page">Não foi possível carregar a página. Verifique a ligação à internet ou o endereço.</string>
+    <string name="btn_retry">Tentar novamente</string>
+
+    <!-- Settings -->
+    <string name="settings_overlay">Janela flutuante</string>
+    <string name="overlay_status_on">Permissão concedida</string>
+    <string name="overlay_status_off">Permissão não concedida</string>
+    <string name="btn_grant_overlay">Conceder permissão</string>
+    <string name="btn_toggle_floating_on">Mostrar janela flutuante</string>
+    <string name="btn_toggle_floating_off">Fechar janela flutuante</string>
+    <string name="overlay_instructions">Como ativar:\n\n1. Toque em "Abrir definições".\n2. Ative "Sobrepor outras janelas" (Display over other apps) para esta aplicação.\n3. Regresse e toque em "Mostrar janela flutuante".\n\nA permissão é pedida pelo Android de forma explícita; pode revogá-la em qualquer altura nas definições.</string>
+    <string name="btn_open_settings">Abrir definições</string>
+    <string name="platform_url">URL da plataforma de jogo</string>
+    <string name="btn_save">Guardar</string>
+    <string name="btn_check_update">Verificar atualizações</string>
+    <string name="checking_updates">A verificar…</string>
+    <string name="update_up_to_date">Está na versão mais recente.</string>
+    <string name="update_available">Nova versão disponível: %1$s</string>
+    <string name="update_check_failed">Não foi possível verificar atualizações (sem internet ou página indisponível).</string>
+    <string name="btn_open_releases">Abrir página de versões (GitHub)</string>
+    <string name="version_fmt">Versão %1$s (versionCode %2$d)</string>
+    <string name="about_text">BAC BO AI ANALYZER — ferramenta estatística para uso pessoal.\n\nO motor estatístico corre localmente no dispositivo e é validado por testes automáticos. A aplicação não aposta automaticamente, não pede credenciais da plataforma e não contorna restrições de segurança.\n\nSe as rondas forem independentes e justas, o sistema não consegue prever o próximo resultado: as percentagens mostradas são estimativas do histórico com a incerteza associada.</string>
+
+    <!-- OCR -->
+    <string name="ocr_title">Importar resultados por OCR</string>
+    <string name="ocr_pick">Escolher imagem</string>
+    <string name="ocr_add_row">Adicionar linha</string>
+    <string name="ocr_save">Guardar rondas</string>
+    <string name="ocr_processing">A processar imagem…</string>
+    <string name="ocr_none">Nenhum resultado reconhecido. Verifique se os resultados aparecem como texto (ex.: "AZUL", "VERMELHO", "EMPATE") na imagem e corrija/adicione linhas manualmente.</string>
+    <string name="ocr_found_fmt">Reconhecidos %1$d resultados — reveja e corrija antes de guardar.</string>
+    <string name="ocr_error_fmt">Erro no OCR: %1$s</string>
+    <string name="ocr_saved_fmt">%1$d rondas guardadas</string>
+
+    <!-- Floating window -->
+    <string name="notif_channel">Janela flutuante</string>
+    <string name="notif_title">BAC BO AI ANALYZER ativo</string>
+    <string name="notif_text">Janela flutuante em execução</string>
+    <string name="panel_next">Próxima ronda (estimativa)</string>
+    <string name="panel_empty">Sem dados</string>
+    <string name="panel_quality_fmt">N: %1$d · %2$s</string>
+    <string name="panel_disclaimer">Estimativa estatística — não é previsão garantida.</string>
+    <string name="panel_btn_open">Abrir</string>
+    <string name="panel_btn_min">Minimizar</string>
+    <string name="panel_btn_close">Fechar</string>
+    <string name="panel_btn_size">Tamanho</string>
+</resources>
