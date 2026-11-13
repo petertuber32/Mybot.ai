@@ -8,7 +8,9 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.provider.Settings
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -19,9 +21,14 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.mybotai.bacboanalyzer.R
 import com.mybotai.bacboanalyzer.data.RoundStore
+import com.mybotai.bacboanalyzer.game.GameState
 import com.mybotai.bacboanalyzer.models.Outcome
+import com.mybotai.bacboanalyzer.observe.ObservationBus
+import com.mybotai.bacboanalyzer.observe.ObservationConsentActivity
+import com.mybotai.bacboanalyzer.observe.ObservationService
 import com.mybotai.bacboanalyzer.stats.Analysis
 import com.mybotai.bacboanalyzer.stats.Quality
 import com.mybotai.bacboanalyzer.stats.StatsEngine
@@ -33,6 +40,11 @@ import kotlin.math.abs
  * WindowManager TYPE_APPLICATION_OVERLAY, shown only after the user
  * grants SYSTEM_ALERT_WINDOW in Android settings. The panel can be
  * dragged, resized (S/M/L), minimized back to a bubble and closed.
+ *
+ * 2.0: the panel also controls the continuous observation — OBSERVAÇÃO
+ * ON/OFF, manual screenshot, table state, recognized dice, last rounds,
+ * current interpretation, Bac Bo prior estimates, confidence level,
+ * insufficient-data warnings and confirmation buttons for ambiguous reads.
  */
 class FloatingService : Service() {
 
@@ -43,8 +55,12 @@ class FloatingService : Service() {
     private var sizeIndex = 1
     private var posX = 48
     private var posY = 240
+    private val mainHandler = Handler(Looper.getMainLooper())
 
-    private val dataListener = { if (expanded) renderPanel() }
+    private val dataListener = { renderIfExpanded() }
+    private val busListener: (com.mybotai.bacboanalyzer.observe.ObservationUiState) -> Unit = {
+        mainHandler.post { renderIfExpanded() }
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -52,6 +68,7 @@ class FloatingService : Service() {
         super.onCreate()
         RoundStore.init(applicationContext)
         RoundStore.addListener(dataListener)
+        ObservationBus.subscribe(busListener)
         createChannel()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
     }
@@ -192,16 +209,114 @@ class FloatingService : Service() {
             safeUpdate(v, params)
         }
 
+        v.findViewById<Button>(R.id.btnObsToggle)?.setOnClickListener { toggleObservation() }
+        v.findViewById<Button>(R.id.btnObsShot)?.setOnClickListener { requestScreenshot() }
+        v.findViewById<Button>(R.id.btnConfirmBlue)?.setOnClickListener { confirm(Outcome.BLUE) }
+        v.findViewById<Button>(R.id.btnConfirmRed)?.setOnClickListener { confirm(Outcome.RED) }
+        v.findViewById<Button>(R.id.btnConfirmTie)?.setOnClickListener { confirm(Outcome.TIE) }
+
         panelView = v
         if (!safeAdd(v, params)) return
         renderPanel()
     }
 
+    private fun toggleObservation() {
+        if (ObservationBus.current.observing) {
+            ContextCompat.startForegroundService(
+                this,
+                Intent(this, ObservationService::class.java).setAction(ObservationService.ACTION_STOP)
+            )
+        } else {
+            startConsent()
+        }
+    }
+
+    private fun requestScreenshot() {
+        if (ObservationBus.current.observing) {
+            ContextCompat.startForegroundService(
+                this,
+                Intent(this, ObservationService::class.java).setAction(ObservationService.ACTION_CAPTURE_ONCE)
+            )
+        } else {
+            startConsent()
+        }
+    }
+
+    private fun startConsent() {
+        try {
+            // The SYSTEM_ALERT_WINDOW grant allows background activity starts;
+            // the consent dialog is the explicit Android permission flow.
+            startActivity(
+                Intent(this, ObservationConsentActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        } catch (e: Exception) {
+            // Cannot happen with the overlay permission granted; be safe anyway.
+        }
+    }
+
+    private fun confirm(outcome: Outcome) {
+        ContextCompat.startForegroundService(
+            this,
+            Intent(this, ObservationService::class.java)
+                .setAction(ObservationService.ACTION_CONFIRM)
+                .putExtra(ObservationService.EXTRA_OUTCOME, outcome)
+        )
+    }
+
+    private fun renderIfExpanded() {
+        if (expanded) mainHandler.post { renderPanel() }
+    }
+
     private fun renderPanel() {
         val v = panelView ?: return
+        val bus = ObservationBus.current
         val rounds = RoundStore.getAll()
-        val analysis = StatsEngine.analyze(rounds)
 
+        // --- Observation status ---
+        v.findViewById<Button>(R.id.btnObsToggle)?.setText(if (bus.observing) R.string.obs_on else R.string.obs_off)
+
+        val stateView = v.findViewById<TextView>(R.id.txtTableState)
+        if (bus.observing) {
+            stateView?.text = getString(R.string.obs_state_fmt, stateLabel(bus.state))
+        } else {
+            stateView?.setText(R.string.obs_state_idle_fmt)
+        }
+
+        val read = bus.lastRead
+        val lastReadView = v.findViewById<TextView>(R.id.txtLastRead)
+        if (read != null && read.knownCount == 4) {
+            val derived = when {
+                (read.blueSum ?: 0) > (read.redSum ?: 0) -> StatsEngine.label(Outcome.BLUE)
+                (read.redSum ?: 0) > (read.blueSum ?: 0) -> StatsEngine.label(Outcome.RED)
+                else -> StatsEngine.label(Outcome.TIE)
+            }
+            lastReadView?.text = getString(
+                R.string.obs_last_read_fmt,
+                read.b1 ?: 0, read.b2 ?: 0, read.r1 ?: 0, read.r2 ?: 0, derived
+            )
+        } else {
+            lastReadView?.setText(R.string.obs_no_data)
+        }
+
+        v.findViewById<LinearLayout>(R.id.confirmRow)?.visibility =
+            if (bus.awaitingConfirmation) View.VISIBLE else View.GONE
+
+        v.findViewById<TextView>(R.id.txtObsInterp)?.text =
+            bus.interpretationSummary ?: getString(R.string.obs_no_data)
+
+        val msgView = v.findViewById<TextView>(R.id.txtObsMsg)
+        val parts = mutableListOf<String>()
+        bus.readConfidence?.let { parts.add(getString(R.string.obs_confidence_fmt, StatsEngine.pct(it))) }
+        bus.message?.let { parts.add(it) }
+        if (parts.isEmpty()) {
+            msgView?.visibility = View.GONE
+        } else {
+            msgView?.text = parts.joinToString(" · ")
+            msgView?.visibility = View.VISIBLE
+        }
+
+        // --- Last rounds dots ---
         val dotsRow = v.findViewById<LinearLayout>(R.id.dotsRow)
         dotsRow?.removeAllViews()
         if (rounds.isEmpty()) {
@@ -225,19 +340,36 @@ class FloatingService : Service() {
             }
         }
 
-        setProb(v, R.id.barBlue, R.id.txtBluePct, analysis, Outcome.BLUE)
-        setProb(v, R.id.barRed, R.id.txtRedPct, analysis, Outcome.RED)
-        setProb(v, R.id.barTie, R.id.txtTiePct, analysis, Outcome.TIE)
+        // --- Estimates: prefer the Bac Bo prior posterior from the
+        //     interpretation engine; fall back to the plain stats engine. ---
+        val analysis = StatsEngine.analyze(rounds)
+        val blueP = bus.estimateFor(Outcome.BLUE)?.p ?: analysis.global.first { it.outcome == Outcome.BLUE }.p
+        val redP = bus.estimateFor(Outcome.RED)?.p ?: analysis.global.first { it.outcome == Outcome.RED }.p
+        val tieP = bus.estimateFor(Outcome.TIE)?.p ?: analysis.global.first { it.outcome == Outcome.TIE }.p
+        setProb(v, R.id.barBlue, R.id.txtBluePct, blueP)
+        setProb(v, R.id.barRed, R.id.txtRedPct, redP)
+        setProb(v, R.id.barTie, R.id.txtTiePct, tieP)
 
         v.findViewById<TextView>(R.id.txtPanelQuality)?.text =
             getString(R.string.panel_quality_fmt, analysis.n, qualityLabel(analysis.quality))
     }
 
-    private fun setProb(v: View, barId: Int, txtId: Int, a: Analysis, o: Outcome) {
-        val est = a.global.firstOrNull { it.outcome == o } ?: return
-        v.findViewById<ProgressBar>(barId)?.progress = (est.p * 100).toInt()
-        v.findViewById<TextView>(txtId)?.text = StatsEngine.pct(est.p)
+    private fun setProb(v: View, barId: Int, txtId: Int, p: Double) {
+        v.findViewById<ProgressBar>(barId)?.progress = (p * 100).toInt().coerceIn(0, 100)
+        v.findViewById<TextView>(txtId)?.text = StatsEngine.pct(p)
     }
+
+    private fun stateLabel(s: GameState): String = getString(
+        when (s) {
+            GameState.WAITING -> R.string.state_waiting
+            GameState.ROLLING -> R.string.state_rolling
+            GameState.READING -> R.string.state_reading
+            GameState.VALIDATING -> R.string.state_validating
+            GameState.SETTLED -> R.string.state_settled
+            GameState.ANALYZING -> R.string.state_analyzing
+            GameState.READY -> R.string.state_ready
+        }
+    )
 
     private fun qualityLabel(q: Quality): String = getString(
         when (q) {
@@ -273,6 +405,7 @@ class FloatingService : Service() {
 
     override fun onDestroy() {
         RoundStore.removeListener(dataListener)
+        ObservationBus.unsubscribe(busListener)
         removeViews()
         super.onDestroy()
     }

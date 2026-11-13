@@ -47,6 +47,7 @@
     <string name="confirm_clear">Apagar todo o histórico? Esta ação não pode ser revertida.</string>
     <string name="src_manual">MANUAL</string>
     <string name="src_ocr">OCR</string>
+    <string name="src_vision">VISÃO</string>
     <string name="edit_outcome">Editar resultado</string>
 
     <!-- Browser -->
@@ -98,4 +99,37 @@
     <string name="panel_btn_min">Minimizar</string>
     <string name="panel_btn_close">Fechar</string>
     <string name="panel_btn_size">Tamanho</string>
+
+    <!-- Observation 2.0 -->
+    <string name="obs_title">Observação contínua</string>
+    <string name="obs_on">OBSERVAÇÃO ON</string>
+    <string name="obs_off">OBSERVAÇÃO OFF</string>
+    <string name="obs_screenshot">Screenshot</string>
+    <string name="obs_channel">Observação da mesa</string>
+    <string name="obs_notif_title">Observação da mesa ativa</string>
+    <string name="obs_notif_text">A acompanhar a mesa do Bac Bo em segundo plano</string>
+    <string name="obs_notif_stop">Parar observação</string>
+    <string name="obs_started">Observação iniciada — abra o jogo; os dados são reconhecidos automaticamente.</string>
+    <string name="obs_capturing">A capturar imagem…</string>
+    <string name="obs_waiting_motion">À espera da próxima ronda…</string>
+    <string name="obs_permission_denied">Permissão de captura recusada. A observação não foi iniciada.</string>
+    <string name="obs_error_no_projection">Não foi possível iniciar a observação (sem autorização de captura).</string>
+    <string name="obs_error_start">Erro ao iniciar a observação: %1$s</string>
+    <string name="obs_error_consent">Não foi possível abrir o pedido de autorização. Abra a aplicação e tente novamente.</string>
+    <string name="obs_insufficient">AVISO: dados insuficientes — as estimativas têm incerteza muito alta.</string>
+    <string name="obs_state_fmt">Mesa: %1$s</string>
+    <string name="obs_state_idle_fmt">Observação desligada</string>
+    <string name="state_waiting">AGUARDANDO</string>
+    <string name="state_rolling">ROLANDO</string>
+    <string name="state_reading">LENDO</string>
+    <string name="state_validating">VALIDANDO</string>
+    <string name="state_settled">REGISTADA</string>
+    <string name="state_analyzing">ANALISANDO</string>
+    <string name="state_ready">PRONTO</string>
+    <string name="obs_last_read_fmt">Dados: B %1$d+%2$d · V %3$d+%4$d → %5$s</string>
+    <string name="obs_confidence_fmt">Confiança do reconhecimento: %1$s</string>
+    <string name="obs_confirm_title">Resultado incerto — confirme o que viu na mesa:</string>
+    <string name="obs_interpretation_title">Interpretação atual</string>
+    <string name="obs_hint">A observação usa a captura de ecrã do Android (MediaProjection). O Android pede autorização explícita a cada sessão; pode parar quando quiser.</string>
+    <string name="obs_no_data">Ainda sem leitura reconhecida.</string>
 </resources>

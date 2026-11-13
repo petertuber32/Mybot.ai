@@ -107,6 +107,7 @@ class HistoryFragment : Fragment(R.layout.fragment_history) {
     private fun sourceName(s: Source): String = when (s) {
         Source.MANUAL -> getString(R.string.src_manual)
         Source.OCR -> getString(R.string.src_ocr)
+        Source.VISION -> getString(R.string.src_vision)
     }
 
     private inner class RoundsAdapter : RecyclerView.Adapter<RoundsAdapter.VH>() {

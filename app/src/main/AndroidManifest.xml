@@ -9,6 +9,10 @@
          must declare the specialUse type plus this normal-level permission. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Continuous observation: MediaProjection screen capture. The Android
+         system consent dialog is shown to the user for EVERY session
+         (ObservationConsentActivity); nothing is captured without it. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
 
     <application
         android:allowBackup="true"
@@ -31,6 +35,21 @@
         <activity
             android:name=".ocr.OcrActivity"
             android:exported="false" />
+
+        <!-- Shows the Android MediaProjection consent dialog for each
+             observation session. Transparent, excluded from recents. -->
+        <activity
+            android:name=".observe.ObservationConsentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Continuous observation foreground service. MediaProjection grants
+             are single-use; the service is START_NOT_STICKY by design. -->
+        <service
+            android:name=".observe.ObservationService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
 
         <!-- Keeps the floating analyzer window alive while the user plays in
              another app. Android 14 requires an explicit FGS type; overlays

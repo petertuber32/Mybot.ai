@@ -44,6 +44,118 @@
         android:orientation="horizontal"
         android:paddingHorizontal="10dp" />
 
+    <!-- Observation 2.0 controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="10dp">
+
+        <Button
+            android:id="@+id/btnObsToggle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.4"
+            android:text="@string/obs_off"
+            android:textColor="@color/on_primary"
+            android:textSize="11sp"
+            app:backgroundTint="@color/primary"
+            app:cornerRadius="10dp" />
+
+        <Button
+            android:id="@+id/btnObsShot"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:text="@string/obs_screenshot"
+            android:textColor="@color/text_main"
+            android:textSize="11sp"
+            app:backgroundTint="#33FFFFFF"
+            app:cornerRadius="10dp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/txtTableState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="10dp"
+        android:layout_marginTop="4dp"
+        android:text="@string/obs_state_idle_fmt"
+        android:textColor="@color/text_main"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/txtLastRead"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="10dp"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp" />
+
+    <LinearLayout
+        android:id="@+id/confirmRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="vertical"
+        android:paddingHorizontal="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/obs_confirm_title"
+            android:textColor="@color/warning"
+            android:textSize="11sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnConfirmBlue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/btn_blue"
+                android:textColor="@color/on_primary"
+                android:textSize="11sp"
+                app:backgroundTint="@color/primary"
+                app:cornerRadius="10dp" />
+
+            <Button
+                android:id="@+id/btnConfirmRed"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="@string/btn_red"
+                android:textColor="@color/on_primary"
+                android:textSize="11sp"
+                app:backgroundTint="@color/red"
+                app:cornerRadius="10dp" />
+
+            <Button
+                android:id="@+id/btnConfirmTie"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="@string/btn_tie"
+                android:textColor="@color/on_primary"
+                android:textSize="11sp"
+                app:backgroundTint="#475569"
+                app:cornerRadius="10dp" />
+        </LinearLayout>
+    </LinearLayout>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -167,6 +279,26 @@
         android:text="@string/panel_quality_fmt"
         android:textColor="@color/text_muted"
         android:textSize="11sp" />
+
+    <TextView
+        android:id="@+id/txtObsInterp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="10dp"
+        android:layout_marginTop="4dp"
+        android:text="@string/obs_no_data"
+        android:textColor="@color/text_main"
+        android:textSize="11sp" />
+
+    <TextView
+        android:id="@+id/txtObsMsg"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="10dp"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/warning"
+        android:textSize="10sp"
+        android:visibility="gone" />
 
     <TextView
         android:layout_width="wrap_content"
