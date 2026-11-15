@@ -238,7 +238,14 @@ class FloatingService : Service() {
                 Intent(this, ObservationService::class.java).setAction(ObservationService.ACTION_CAPTURE_ONCE)
             )
         } else {
-            startConsent()
+            // Observation is OFF: show why nothing was captured instead of
+            // re-opening the Android consent dialog automatically.
+            ObservationBus.post {
+                it.copy(
+                    observing = false,
+                    message = getString(R.string.obs_screenshot_requires_observation)
+                )
+            }
         }
     }
 

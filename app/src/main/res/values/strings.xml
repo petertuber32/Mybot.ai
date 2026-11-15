@@ -113,9 +113,14 @@
     <string name="obs_capturing">A capturar imagem…</string>
     <string name="obs_waiting_motion">À espera da próxima ronda…</string>
     <string name="obs_permission_denied">Permissão de captura recusada. A observação não foi iniciada.</string>
-    <string name="obs_error_no_projection">Não foi possível iniciar a observação (sem autorização de captura).</string>
+    <string name="obs_error_no_projection">Não foi possível iniciar a observação (sem autorização de captura). Toque em OBSERVAÇÃO OFF para autorizar manualmente.</string>
     <string name="obs_error_start">Erro ao iniciar a observação: %1$s</string>
+    <string name="obs_error_service">Erro no serviço de observação: %1$s</string>
     <string name="obs_error_consent">Não foi possível abrir o pedido de autorização. Abra a aplicação e tente novamente.</string>
+    <string name="obs_screenshot_requires_observation">Observação desligada — ligue a OBSERVAÇÃO para poder pedir uma captura.</string>
+    <string name="obs_projection_stopped">A captura foi interrompida pelo sistema. Ligue a OBSERVAÇÃO novamente para continuar.</string>
+    <string name="obs_stopped">Observação terminada.</string>
+    <string name="obs_already_active">A observação já está ativa.</string>
     <string name="obs_insufficient">AVISO: dados insuficientes — as estimativas têm incerteza muito alta.</string>
     <string name="obs_state_fmt">Mesa: %1$s</string>
     <string name="obs_state_idle_fmt">Observação desligada</string>

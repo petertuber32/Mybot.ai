@@ -18,8 +18,8 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import android.util.DisplayMetrics
-import android.view.Display
 import android.view.WindowManager
+import androidx.core.content.IntentCompat
 import com.mybotai.bacboanalyzer.R
 import com.mybotai.bacboanalyzer.data.RoundStore
 import com.mybotai.bacboanalyzer.game.BacBoRules
@@ -44,9 +44,10 @@ import com.mybotai.bacboanalyzer.vision.SmartCaptureGate
  * Continuous observation service (BAC BO AI ANALYZER 2.0).
  *
  * Uses MediaProjection with EXPLICIT user consent per session (the Android
- * system dialog). Frames are captured through an ImageReader, downscaled to
- * [ObservationConfig.ANALYSIS_WIDTH] and processed on a background thread
- * with an event-driven gate — idle screens cost almost zero CPU.
+ * system dialog, opened ONLY by [ObservationConsentActivity] when the user
+ * taps OBSERVAÇÃO). Frames are captured through an ImageReader, downscaled
+ * to [ObservationConfig.ANALYSIS_WIDTH] and processed on a background
+ * thread with an event-driven gate — idle screens cost almost zero CPU.
  *
  * The pipeline: gate -> state machine -> DiceImageAnalyzer -> BacBoRules
  * validation -> MatchMemory (duplicate guard, persistence) -> global history
@@ -54,6 +55,22 @@ import com.mybotai.bacboanalyzer.vision.SmartCaptureGate
  *
  * Ambiguous reads are never committed automatically: the bus publishes the
  * candidate and the user confirms AZUL/VERMELHO/EMPATE in the overlay.
+ *
+ * Authorization-flow guarantees (anti-loop):
+ *  - the service NEVER opens the consent dialog; if a command arrives
+ *    without an active session it posts an error to the bus instead;
+ *  - [onStartCommand] always promotes the service to foreground (Android 8+
+ *    requires it for every startForegroundService call): with the
+ *    mediaProjection type when a fresh consent arrives, with the specialUse
+ *    type for plain user commands (declared in the manifest);
+ *  - ONE capture session per authorization: the grant token is consumed
+ *    exactly once and a redelivered ACTION_START can never reuse it;
+ *  - every failure (getMediaProjection, createVirtualDisplay, FGS start)
+ *    posts a real error message to the bus and stops the service cleanly.
+ *    The consent dialog is never re-opened automatically;
+ *  - [MediaProjection.Callback.onStop] is registered before the virtual
+ *    display is created and teardown is idempotent (the system may fire
+ *    onStop when we call stop() ourselves).
  *
  * The service cannot survive process death (a MediaProjection grant is
  * single-use), so it is intentionally START_NOT_STICKY.
@@ -68,6 +85,13 @@ class ObservationService : Service() {
     private var mainHandler: Handler = Handler(Looper.getMainLooper())
     private var prevFrame: Frame? = null
     private var captureOnce = false
+
+    /** The single-use consent token delivered to the CURRENT session. */
+    private var consentConsumed = false
+
+    /** Guards against teardown re-entering itself (projection.stop() re-fires onStop). */
+    @Volatile
+    private var tearingDown = false
 
     private val gate = SmartCaptureGate(
         motionThreshold = 0.012,
@@ -89,7 +113,10 @@ class ObservationService : Service() {
 
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() {
-            teardown()
+            // The grant ended (user stopped it from the system cast UI or the
+            // system revoked it). Never re-request authorization here: show
+            // the state and stop cleanly.
+            teardown(reasonRes = R.string.obs_projection_stopped)
         }
     }
 
@@ -104,37 +131,78 @@ class ObservationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
+        val action = intent?.action
+        // Android 8+: EVERY startForegroundService() call must be followed by
+        // startForeground(), otherwise the app crashes with
+        // ForegroundServiceDidNotStartInTimeException after ~5s. The UI sends
+        // STOP/CONFIRM/REJECT/CAPTURE_ONCE through startForegroundService too,
+        // so promote on every path. mediaProjection type only for a fresh
+        // consent (ACTION_START); specialUse for plain user commands — this
+        // keeps Android 14+ happy in both cases.
+        val fgsType = if (action == ACTION_START) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+        } else {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        }
+        try {
+            startForegroundNotification(fgsType)
+        } catch (e: Exception) {
+            fail(e)
+            return START_NOT_STICKY
+        }
+
+        when (action) {
             ACTION_START -> {
                 val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
-                val data = intent.getParcelableExtra<Intent>(EXTRA_DATA)
-                startForegroundNotification()
-                if (projection == null && data != null) {
-                    setupProjection(resultCode, data)
-                } else if (projection == null) {
-                    ObservationBus.post { it.copy(message = getString(R.string.obs_error_no_projection)) }
-                    stopSelf()
+                val data = IntentCompat.getParcelableExtra(intent, EXTRA_DATA, Intent::class.java)
+                when {
+                    projection != null || virtualDisplay != null ->
+                        // Already observing with the previous grant: one
+                        // capture session per authorization, never a second.
+                        ObservationBus.post {
+                            it.copy(message = getString(R.string.obs_already_active))
+                        }
+                    data != null && !consentConsumed -> setupProjection(resultCode, data)
+                    else -> {
+                        // No usable grant in this delivery: report and stop.
+                        // NEVER loop back into the consent dialog from here.
+                        ObservationBus.post {
+                            it.copy(
+                                observing = false,
+                                message = getString(R.string.obs_error_no_projection)
+                            )
+                        }
+                        stopSelf()
+                    }
                 }
             }
             ACTION_CAPTURE_ONCE -> {
-                if (projection == null) {
-                    startConsent()
-                } else {
+                if (projection != null) {
                     captureOnce = true
                     ObservationBus.post { it.copy(message = getString(R.string.obs_capturing)) }
+                } else {
+                    // Observation is OFF: report it. The screenshot button
+                    // must not silently re-open the consent dialog.
+                    ObservationBus.post {
+                        it.copy(
+                            observing = false,
+                            message = getString(R.string.obs_screenshot_requires_observation)
+                        )
+                    }
+                    stopSelf()
                 }
             }
-            ACTION_STOP -> teardown()
+            ACTION_STOP -> teardown(reasonRes = R.string.obs_stopped)
             ACTION_CONFIRM -> {
-                val outcome = intent.getSerializableExtra(EXTRA_OUTCOME) as? Outcome
-                if (outcome != null) {
-                    val h = handler
-                    if (h != null) h.post { machineEvent(GameEvent.UserConfirmed(outcome)) }
-                }
+                val outcome = IntentCompat.getSerializableExtra(intent, EXTRA_OUTCOME, Outcome::class.java)
+                val h = handler
+                if (outcome != null && h != null) h.post { machineEvent(GameEvent.UserConfirmed(outcome)) }
+                if (h == null) stopSelf()
             }
             ACTION_REJECT -> {
                 val h = handler
                 if (h != null) h.post { machineEvent(GameEvent.UserRejected) }
+                else stopSelf()
             }
             else -> {
                 // Restarted by the system without consent data: cannot observe.
@@ -149,9 +217,16 @@ class ObservationService : Service() {
     // ---------------------------------------------------------------------
 
     private fun setupProjection(resultCode: Int, data: Intent) {
+        if (consentConsumed || projection != null || virtualDisplay != null) {
+            // One capture session per authorization.
+            return
+        }
+        consentConsumed = true
         try {
             val mpm = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             val proj = mpm.getMediaProjection(resultCode, data)
+            // Register the callback BEFORE creating the virtual display so a
+            // system-side stop during setup is always observed.
             proj.registerCallback(projectionCallback, mainHandler)
             projection = proj
 
@@ -186,22 +261,29 @@ class ObservationService : Service() {
                 )
             }
         } catch (e: Exception) {
-            ObservationBus.post {
-                it.copy(observing = false, message = getString(R.string.obs_error_start, e.message ?: ""))
-            }
-            teardown()
+            fail(e)
         }
+    }
+
+    /** Reports a real, visible error and stops. Never re-opens the consent dialog. */
+    private fun fail(e: Exception) {
+        val detail = e.message ?: e.javaClass.simpleName
+        ObservationBus.post {
+            it.copy(
+                observing = false,
+                message = getString(R.string.obs_error_start, detail)
+            )
+        }
+        teardown() // teardown preserves the message posted above
     }
 
     private fun screenSize(): Triple<Int, Int, Int> {
         val wm = getSystemService(WINDOW_SERVICE) as WindowManager
-        var w: Int
-        var h: Int
         val metrics = DisplayMetrics()
         @Suppress("DEPRECATION")
         wm.defaultDisplay.getRealMetrics(metrics)
-        w = metrics.widthPixels
-        h = metrics.heightPixels
+        var w = metrics.widthPixels
+        var h = metrics.heightPixels
         val dpi = metrics.densityDpi
         // Cap capture resolution to keep memory low on entry-level devices.
         val cap = 1080
@@ -213,34 +295,38 @@ class ObservationService : Service() {
         return Triple(w.coerceAtLeast(1), h.coerceAtLeast(1), dpi)
     }
 
-    private fun startConsent() {
-        try {
-            val i = Intent(this, ObservationConsentActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(i)
-        } catch (e: Exception) {
-            ObservationBus.post {
-                it.copy(message = getString(R.string.obs_error_consent))
-            }
-        }
-    }
-
-    private fun teardown() {
-        // Stop frame processing first so no state-machine event races teardown.
+    /**
+     * Releases every resource exactly once and publishes the OFF state.
+     * [reasonRes] (optional) becomes the user-visible message; without it the
+     * last posted message is preserved (so an error posted by [fail] is never
+     * wiped by this teardown).
+     */
+    private fun teardown(reasonRes: Int? = null) {
+        if (tearingDown) return
+        tearingDown = true
+        cancelIdle()
         handlerThread?.quitSafely()
         handlerThread = null
         handler = null
-        cancelIdle()
         runCatching { virtualDisplay?.release() }
         runCatching { reader?.close() }
-        runCatching { projection?.stop() }
+        projection?.let { runCatching { it.stop() } } // may re-fire onStop; guarded
         virtualDisplay = null
         reader = null
         projection = null
         prevFrame = null
         synchronized(machineLock) { machine.reset() }
         stopForeground(STOP_FOREGROUND_REMOVE)
-        ObservationBus.reset()
+        val reason = reasonRes?.let { getString(it) }
+        ObservationBus.post { st ->
+            st.copy(
+                observing = false,
+                state = GameState.WAITING,
+                awaitingConfirmation = false,
+                readConfidence = null,
+                message = reason ?: st.message ?: getString(R.string.obs_stopped)
+            )
+        }
         stopSelf()
     }
 
@@ -321,6 +407,7 @@ class ObservationService : Service() {
     // ---------------------------------------------------------------------
 
     private fun onStateChanged(state: GameState) {
+        if (tearingDown) return
         when (state) {
             GameState.SETTLED -> commitPending()
             else -> Unit
@@ -418,7 +505,7 @@ class ObservationService : Service() {
         )
     }
 
-    private fun startForegroundNotification() {
+    private fun startForegroundNotification(type: Int) {
         val stopIntent = PendingIntent.getService(
             this, 1,
             Intent(this, ObservationService::class.java).setAction(ACTION_STOP),
@@ -432,18 +519,17 @@ class ObservationService : Service() {
             .addAction(0, getString(R.string.obs_notif_stop), stopIntent)
             .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                OBS_NOTIF_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-            )
+            // Android 14+: the type must match the manifest declaration.
+            // MEDIA_PROJECTION only for a fresh consent; SPECIAL_USE for
+            // plain user commands (both declared in the manifest).
+            startForeground(OBS_NOTIF_ID, notification, type)
         } else {
             startForeground(OBS_NOTIF_ID, notification)
         }
     }
 
     override fun onDestroy() {
-        teardown()
+        if (!tearingDown) teardown()
         super.onDestroy()
     }
 

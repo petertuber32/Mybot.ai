@@ -6,6 +6,23 @@ Aplicação Android nativa (Kotlin) do **BAC BO AI ANALYZER**: navegador integra
 
 ---
 
+## 0. Correção 2.0.1 — fluxo de autorização da captura (anti-ciclo)
+
+Corrige o ciclo infinito do diálogo «Iniciar agora» do Android. Causas eliminadas e garantias atuais:
+
+| # | Garantia | Implementação |
+| --- | --- | --- |
+| 1 | Autorização só quando o utilizador inicia a observação | O diálogo do sistema só é aberto por `ObservationConsentActivity`, lançada exclusivamente pelo botão OBSERVAÇÃO (janela flutuante ou ecrã Analisador). |
+| 2 | Resultado guardado corretamente para a sessão | `resultCode` + `resultData` entregues **uma única vez** ao serviço via intent; o token é consumido por `getMediaProjection()` com guarda `consentConsumed` (nunca reutilizado). |
+| 3 | Foreground Service correto por versão | `startForeground()` em **todos** os caminhos de `onStartCommand`; tipo `mediaProjection` com consentimento fresco (Android 14+), tipo `specialUse` para comandos do utilizador; ambos declarados no manifest. |
+| 4 | Sem pedidos repetidos de autorização | Guarda single-flight no processo (só um diálogo de cada vez) + guarda de recriação da Activity (`savedInstanceState`) + o serviço **nunca** abre o diálogo; captura sem observação mostra mensagem de erro em vez de reabrir autorização. |
+| 5 | Uma sessão de captura por autorização | `setupProjection()` recusa-se se já existir projeção/display ativo; `ACTION_START` repetido responde «A observação já está ativa». |
+| 6 | `MediaProjection.Callback` correto | Callback registado **antes** de `createVirtualDisplay`; `teardown()` é idempotente (o `stop()` interno volta a disparar `onStop` e é ignorado). |
+| 7 | Erros visíveis, sem repetição automática | Falhas (`getMediaProjection`, `createVirtualDisplay`, `startForeground`, recusa do utilizador) publicam uma mensagem real no painel; o `teardown()` já não apaga a mensagem (fim do `reset()` cego). |
+| 8 | Captura falha ≠ reabrir autorização | Botão Screenshot com observação desligada mostra «Observação desligada — ligue a OBSERVAÇÃO…» em vez de reabrir o diálogo. |
+
+---
+
 ## 1. Novidades da versão 2.0
 
 | Módulo | Descrição |
